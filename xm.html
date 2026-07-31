@@ -193,10 +193,11 @@ if (location.protocol.startsWith('http')) {
   .growth-tab { flex: 1; padding: 7px; border: 1px solid var(--border); border-radius: 8px; background: transparent; color: var(--text-light); font-family: inherit; font-size: 0.72rem; font-weight: 600; cursor: pointer; text-align: center; }
   .growth-tab.active { background: var(--primary); color: white; border-color: var(--primary); }
   .growth-chart-wrap { position: relative; height: 180px; background: rgba(255,255,255,0.4); border-radius: 10px; padding: 8px; margin-bottom: 10px; }
-  .growth-input-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; padding: 8px; background: rgba(184,112,122,0.04); border-radius: 10px; }
-  .growth-input-row input { flex: 1; min-width: 0; padding: 6px 8px; font-size: 0.72rem; }
-  .growth-input-row input[type="date"] { max-width: 130px; flex: 0 1 130px; }
-  .growth-input-row input[type="number"] { max-width: 70px; flex: 1 1 70px; }
+  .growth-input-area { display: flex; flex-direction: column; gap: 6px; padding: 8px; background: rgba(184,112,122,0.04); border-radius: 10px; }
+  .growth-input-line { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .growth-input-line input { flex: 1; min-width: 0; padding: 6px 8px; font-size: 0.72rem; }
+  .growth-input-line input[type="date"] { flex: 1; min-width: 120px; }
+  .growth-input-line input[type="number"] { flex: 1; min-width: 60px; }
   .growth-input-lbl { font-size: 0.6rem; color: var(--text-light); white-space: nowrap; }
   .growth-empty { text-align: center; color: var(--text-light); font-size: 0.72rem; padding: 16px 8px; }
 
@@ -364,19 +365,23 @@ if (location.protocol.startsWith('http')) {
         <div class="card-icon">📏</div>
         <div><div class="card-title">生长曲线</div><div class="card-subtitle">记录每一次成长的痕迹</div></div>
       </div>
-      <div class="growth-latest" id="growthLatest"></div>
       <div class="growth-tabs">
         <button class="growth-tab active" data-metric="weight" onclick="switchGrowthTab('weight')">体重</button>
         <button class="growth-tab" data-metric="height" onclick="switchGrowthTab('height')">身高</button>
         <button class="growth-tab" data-metric="head" onclick="switchGrowthTab('head')">头围</button>
       </div>
       <div class="growth-chart-wrap"><canvas id="growthChart"></canvas></div>
-      <div class="growth-input-row">
-        <input type="date" id="growthDate">
-        <span class="growth-input-lbl">体重kg</span><input type="number" id="growthWeight" step="0.01" placeholder="6.5">
-        <span class="growth-input-lbl">身长cm</span><input type="number" id="growthHeight" step="0.1" placeholder="62">
-        <span class="growth-input-lbl">头围cm</span><input type="number" id="growthHead" step="0.1" placeholder="40">
-        <button class="btn btn-sm" onclick="addGrowthRecord()">记录</button>
+      <div class="growth-input-area">
+        <div class="growth-input-line">
+          <span class="growth-input-lbl">📅 日期</span>
+          <input type="date" id="growthDate">
+        </div>
+        <div class="growth-input-line">
+          <span class="growth-input-lbl">体重kg</span><input type="number" id="growthWeight" step="0.01" placeholder="6.5">
+          <span class="growth-input-lbl">身长cm</span><input type="number" id="growthHeight" step="0.1" placeholder="62">
+          <span class="growth-input-lbl">头围cm</span><input type="number" id="growthHead" step="0.1" placeholder="40">
+          <button class="btn btn-sm" onclick="addGrowthRecord()">记录</button>
+        </div>
       </div>
     </div>
   </div>
@@ -559,25 +564,6 @@ const growthMeta = {
   head:    {label:'头围', unit:'cm', color:'#D4A373', colorBg:'rgba(212,163,115,0.1)'}
 };
 function getBabyMonths(){ const n=new Date();let m=(n.getFullYear()-babyBirth.getFullYear())*12+(n.getMonth()-babyBirth.getMonth());if(n.getDate()<babyBirth.getDate())m--;return Math.max(0,m); }
-function renderGrowthLatest(){
-  const el = document.getElementById('growthLatest');
-  if(!growthRecords.length){
-    el.innerHTML = '<div class="growth-empty">还没有记录，快添加第一笔吧 📐</div>';
-    return;
-  }
-  const latest = growthRecords[growthRecords.length-1];
-  const d = latest.date;
-  const fmtDate = `${d.substring(5,7)}-${d.substring(8,10)}`;
-  const items = [
-    {key:'weight', val:latest.weight, cls:'weight'},
-    {key:'height', val:latest.height, cls:'height'},
-    {key:'head', val:latest.head, cls:'head'}
-  ];
-  el.innerHTML = items.map(it=>{
-    const meta = growthMeta[it.key];
-    return `<div class="growth-stat ${it.cls}"><div class="growth-stat-val">${it.val||'-'}<span class="growth-stat-unit">${meta.unit}</span></div><div class="growth-stat-lbl">${meta.label}</div><div class="growth-stat-date">${fmtDate}</div></div>`;
-  }).join('');
-}
 function renderGrowthChart(){
   const meta = growthMeta[growthMetric];
   const ctx = document.getElementById('growthChart');
@@ -629,10 +615,8 @@ function addGrowthRecord(){
   document.getElementById('growthWeight').value='';
   document.getElementById('growthHeight').value='';
   document.getElementById('growthHead').value='';
-  renderGrowthLatest();
   renderGrowthChart();
 }
-renderGrowthLatest();
 renderGrowthChart();
 
 // ==================== 疫苗 ====================
