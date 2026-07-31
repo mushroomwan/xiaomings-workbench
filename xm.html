@@ -61,10 +61,12 @@ if (location.protocol.startsWith('http')) {
 
   .container { max-width: 1200px; margin: 0 auto; }
 
-  header { text-align: center; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+  header { text-align: center; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--border); position: relative; }
   header h1 { font-size: 1.4rem; font-weight: 700; color: var(--primary); letter-spacing: 3px; margin-bottom: 4px; }
   header .subtitle { font-size: 0.75rem; color: var(--text-light); letter-spacing: 1.5px; }
   header .date-display { margin-top: 6px; font-size: 0.72rem; color: var(--accent); font-weight: 600; }
+  .refresh-btn { position: absolute; right: 0; top: 0; background: none; border: 1.5px solid var(--border); border-radius: 8px; padding: 4px 8px; font-size: 0.7rem; color: var(--text-light); cursor: pointer; }
+  .refresh-btn:active { background: rgba(184,112,122,0.08); color: var(--primary); }
 
   .dashboard { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
   .span-2 { grid-column: span 2; }
@@ -255,6 +257,7 @@ if (location.protocol.startsWith('http')) {
 <body>
 <div class="container">
   <header>
+    <button class="refresh-btn" onclick="forceRefresh()" title="刷新最新版本">🔄 刷新</button>
     <h1>小明的工作台</h1>
     <div class="subtitle">陪伴成长 · 温柔养育 · 共同学习</div>
     <div class="date-display" id="currentDate"></div>
@@ -493,6 +496,23 @@ const loadData = (k, def=[]) => { try { const d = localStorage.getItem(k); retur
 const saveData = (k,d) => { localStorage.setItem(k, JSON.stringify(d)); saveToCloud(); };
 
 document.getElementById('currentDate').textContent = new Date().toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
+
+// 强制刷新页面（绕过 Service Worker 缓存）
+function forceRefresh(){
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.getRegistration().then(function(reg){
+      if(reg){
+        reg.unregister().then(function(){
+          window.location.reload(true);
+        });
+      } else {
+        window.location.reload(true);
+      }
+    });
+  } else {
+    window.location.reload(true);
+  }
+}
 
 // ==================== 育儿: 月龄 ====================
 const babyBirth = new Date('2026-02-15');
