@@ -61,11 +61,12 @@ if (location.protocol.startsWith('http')) {
 
   .container { max-width: 1200px; margin: 0 auto; }
 
-  header { text-align: center; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--border); position: relative; }
+  header { text-align: center; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
   header h1 { font-size: 1.4rem; font-weight: 700; color: var(--primary); letter-spacing: 3px; margin-bottom: 4px; }
   header .subtitle { font-size: 0.75rem; color: var(--text-light); letter-spacing: 1.5px; }
-  header .date-display { margin-top: 6px; font-size: 0.72rem; color: var(--accent); font-weight: 600; }
-  .refresh-btn { position: absolute; right: 0; top: 0; background: none; border: 1.5px solid var(--border); border-radius: 8px; padding: 4px 8px; font-size: 0.7rem; color: var(--text-light); cursor: pointer; }
+  .header-row { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 6px; }
+  header .date-display { font-size: 0.72rem; color: var(--accent); font-weight: 600; }
+  .refresh-btn { background: none; border: 1.5px solid var(--border); border-radius: 8px; padding: 3px 8px; font-size: 0.65rem; color: var(--text-light); cursor: pointer; line-height: 1.4; }
   .refresh-btn:active { background: rgba(184,112,122,0.08); color: var(--primary); }
 
   .dashboard { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
@@ -195,12 +196,15 @@ if (location.protocol.startsWith('http')) {
   .growth-tab { flex: 1; padding: 7px; border: 1px solid var(--border); border-radius: 8px; background: transparent; color: var(--text-light); font-family: inherit; font-size: 0.72rem; font-weight: 600; cursor: pointer; text-align: center; }
   .growth-tab.active { background: var(--primary); color: white; border-color: var(--primary); }
   .growth-chart-wrap { position: relative; height: 180px; background: rgba(255,255,255,0.4); border-radius: 10px; padding: 8px; margin-bottom: 10px; }
-  .growth-input-area { display: flex; flex-direction: column; gap: 6px; padding: 8px; background: rgba(184,112,122,0.04); border-radius: 10px; }
-  .growth-input-line { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-  .growth-input-line input { flex: 1; min-width: 0; padding: 6px 8px; font-size: 0.72rem; }
-  .growth-input-line input[type="date"] { flex: 1; min-width: 120px; }
-  .growth-input-line input[type="number"] { flex: 1; min-width: 60px; }
-  .growth-input-lbl { font-size: 0.6rem; color: var(--text-light); white-space: nowrap; }
+  .growth-input-area { display: flex; flex-direction: column; gap: 8px; padding: 10px; background: rgba(184,112,122,0.04); border-radius: 10px; }
+  .growth-input-line { display: flex; gap: 6px; align-items: center; }
+  .growth-input-line input { padding: 6px 4px; font-size: 0.72rem; border-radius: 8px; min-width: 0; }
+  .growth-input-line input[type="date"] { flex: 1; max-width: 140px; }
+  .growth-input-line input[type="number"] { flex: 1; text-align: center; }
+  .growth-input-lbl { font-size: 0.58rem; color: var(--text-light); white-space: nowrap; flex-shrink: 0; }
+  .growth-input-line .btn-sm { padding: 6px 10px; font-size: 0.68rem; flex-shrink: 0; }
+  .growth-field-group { display: flex; align-items: center; gap: 2px; flex: 1; min-width: 0; }
+  .growth-field-group input { flex: 1; }
   .growth-empty { text-align: center; color: var(--text-light); font-size: 0.72rem; padding: 16px 8px; }
 
   /* === 链接学习笔记 === */
@@ -257,10 +261,12 @@ if (location.protocol.startsWith('http')) {
 <body>
 <div class="container">
   <header>
-    <button class="refresh-btn" onclick="forceRefresh()" title="刷新最新版本">🔄 刷新</button>
     <h1>小明的工作台</h1>
     <div class="subtitle">陪伴成长 · 温柔养育 · 共同学习</div>
-    <div class="date-display" id="currentDate"></div>
+    <div class="header-row">
+      <div class="date-display" id="currentDate"></div>
+      <button class="refresh-btn" onclick="forceRefresh()" title="刷新最新版本">🔄 刷新</button>
+    </div>
     <div class="sync-status" id="syncStatus" style="font-size:0.65rem;color:var(--text-light);margin-top:4px;"></div>
   </header>
 
@@ -380,9 +386,9 @@ if (location.protocol.startsWith('http')) {
           <input type="date" id="growthDate">
         </div>
         <div class="growth-input-line">
-          <span class="growth-input-lbl">体重kg</span><input type="number" id="growthWeight" step="0.01" placeholder="6.5">
-          <span class="growth-input-lbl">身长cm</span><input type="number" id="growthHeight" step="0.1" placeholder="62">
-          <span class="growth-input-lbl">头围cm</span><input type="number" id="growthHead" step="0.1" placeholder="40">
+          <div class="growth-field-group"><span class="growth-input-lbl">体重</span><input type="number" id="growthWeight" step="0.01" placeholder="kg"></div>
+          <div class="growth-field-group"><span class="growth-input-lbl">身长</span><input type="number" id="growthHeight" step="0.1" placeholder="cm"></div>
+          <div class="growth-field-group"><span class="growth-input-lbl">头围</span><input type="number" id="growthHead" step="0.1" placeholder="cm"></div>
           <button class="btn btn-sm" onclick="addGrowthRecord()">记录</button>
         </div>
       </div>
