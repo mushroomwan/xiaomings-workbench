@@ -445,11 +445,23 @@ async function uploadToCloud(){
   if(isSyncing) return;
   isSyncing = true;
   document.getElementById('syncStatus').textContent='⏳ 正在上传...';
+  document.getElementById('syncStatus').style.color='var(--text-light)';
   try{
     const allData = {};
     Object.keys(localStorage).forEach(k => { if(k.startsWith('wb_')) allData[k] = localStorage.getItem(k); });
     allData._syncTime = Date.now();
-    const content = btoa(unescape(encodeURIComponent(JSON.stringify(allData))));
+    // 用 TextEncoder 处理中文，避免 btoa 的中文问题
+    const jsonStr = JSON.stringify(allData);
+    let content;
+    try {
+      content = btoa(unescape(encodeURIComponent(jsonStr)));
+    } catch(e) {
+      // 备用方案：手动转 base64
+      const bytes = new TextEncoder().encode(jsonStr);
+      let bin = '';
+      bytes.forEach(b => bin += String.fromCharCode(b));
+      content = btoa(bin);
+    }
     const getRes = await fetch(CLOUD.API+'?ref=main', { headers:{ 'Authorization':'token '+CLOUD.TOKEN } });
     let sha = '';
     if(getRes.ok){ const fileInfo = await getRes.json(); sha = fileInfo.sha || ''; }
@@ -459,14 +471,22 @@ async function uploadToCloud(){
       body: JSON.stringify({ message:'同步工作台数据', content:content, sha:sha, branch:'main' })
     });
     if(res.ok){
-      document.getElementById('syncStatus').textContent='✅ 上传成功！数据已同步到云端';
+      document.getElementById('syncStatus').textContent='✅ 上传成功！';
       document.getElementById('syncStatus').style.color='#6B9B6B';
-      setTimeout(()=>{ document.getElementById('syncStatus').textContent='☁️ 已连接云端'; }, 3000);
+      setTimeout(()=>{ 
+        document.getElementById('syncStatus').innerHTML='☁️ 已连接云端 · <a href="javascript:uploadToCloud()" style="color:var(--primary);font-weight:600;">上传</a> / <a href="javascript:restoreFromCloud()" style="color:var(--primary);font-weight:600;">恢复</a>';
+      }, 3000);
     } else {
-      document.getElementById('syncStatus').textContent='❌ 上传失败';
+      const errText = await res.text().catch(()=>'');
+      let errInfo = 'HTTP '+res.status;
+      try { const errJson = JSON.parse(errText); if(errJson.message) errInfo += ': '+errJson.message; } catch(e){}
+      document.getElementById('syncStatus').textContent='❌ 上传失败 ('+errInfo+')';
       document.getElementById('syncStatus').style.color='var(--angry)';
     }
-  }catch(e){ document.getElementById('syncStatus').textContent='❌ 上传失败:'+e; }
+  }catch(e){ 
+    document.getElementById('syncStatus').textContent='❌ 上传失败:'+e.message; 
+    document.getElementById('syncStatus').style.color='var(--angry)';
+  }
   isSyncing = false;
 }
 
