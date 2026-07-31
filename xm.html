@@ -205,6 +205,13 @@ if (location.protocol.startsWith('http')) {
   .growth-input-line .btn-sm { padding: 6px 10px; font-size: 0.68rem; flex-shrink: 0; }
   .growth-field-group { display: flex; align-items: center; gap: 2px; flex: 1; min-width: 0; }
   .growth-field-group input { flex: 1; }
+  .growth-records { margin-top: 8px; max-height: 120px; overflow-y: auto; }
+  .growth-records-title { font-size: 0.66rem; color: var(--text-light); font-weight: 600; margin-bottom: 5px; }
+  .growth-record-item { display: flex; align-items: center; gap: 6px; padding: 5px 8px; background: rgba(255,255,255,0.5); border-radius: 8px; margin-bottom: 4px; font-size: 0.68rem; border: 1px solid var(--border); }
+  .growth-record-date { font-size: 0.6rem; color: var(--text-light); flex-shrink: 0; width: 42px; }
+  .growth-record-data { flex: 1; color: var(--text); }
+  .growth-record-del { background: none; border: none; color: var(--text-light); font-size: 0.7rem; cursor: pointer; padding: 2px 4px; flex-shrink: 0; opacity: 0.5; }
+  .growth-record-del:active { opacity: 1; color: var(--angry); }
   .growth-empty { text-align: center; color: var(--text-light); font-size: 0.72rem; padding: 16px 8px; }
 
   /* === 链接学习笔记 === */
@@ -392,6 +399,7 @@ if (location.protocol.startsWith('http')) {
           <button class="btn btn-sm" onclick="addGrowthRecord()">记录</button>
         </div>
       </div>
+      <div class="growth-records" id="growthRecords"></div>
     </div>
   </div>
 </div>
@@ -663,8 +671,31 @@ function addGrowthRecord(){
   document.getElementById('growthHeight').value='';
   document.getElementById('growthHead').value='';
   renderGrowthChart();
+  renderGrowthRecords();
+}
+function renderGrowthRecords(){
+  const el=document.getElementById('growthRecords');
+  if(!growthRecords.length){ el.innerHTML=''; return; }
+  const sorted=growthRecords.map((r,i)=>({r,i})).sort((a,b)=>b.r.date.localeCompare(a.r.date));
+  el.innerHTML='<div class="growth-records-title">📋 历史记录</div>'+sorted.map(({r,i})=>{
+    const parts=[];
+    if(r.weight)parts.push('体重'+r.weight+'kg');
+    if(r.height)parts.push('身长'+r.height+'cm');
+    if(r.head)parts.push('头围'+r.head+'cm');
+    const md=r.date.substring(5);
+    return `<div class="growth-record-item"><span class="growth-record-date">${md}</span><span class="growth-record-data">${parts.join(' · ')||'无数据'}</span><button class="growth-record-del" onclick="deleteGrowthRecord(${i})">✕</button></div>`;
+  }).join('');
+}
+function deleteGrowthRecord(i){
+  if(confirm('确定删除这条记录吗？')){
+    growthRecords.splice(i,1);
+    saveData(KEYS.growth,growthRecords);
+    renderGrowthChart();
+    renderGrowthRecords();
+  }
 }
 renderGrowthChart();
+renderGrowthRecords();
 
 // ==================== 疫苗 ====================
 // 2026年最新国家免疫规划疫苗程序
