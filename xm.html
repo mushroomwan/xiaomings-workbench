@@ -675,7 +675,7 @@ function addGrowthRecord(){
 }
 function renderGrowthRecords(){
   const el=document.getElementById('growthRecords');
-  if(!growthRecords.length){ el.innerHTML=''; return; }
+  if(!growthRecords.length){ el.innerHTML='<div class="growth-records-title">📋 历史记录</div><div style="text-align:center;color:var(--text-light);font-size:0.68rem;padding:8px;">暂无记录，填写上方数据后点击"记录"</div>'; return; }
   const sorted=growthRecords.map((r,i)=>({r,i})).sort((a,b)=>b.r.date.localeCompare(a.r.date));
   el.innerHTML='<div class="growth-records-title">📋 历史记录</div>'+sorted.map(({r,i})=>{
     const parts=[];
