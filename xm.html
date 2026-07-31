@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>小明的工作台</title>
+<!-- PWA 支持（manifest 动态加载，file:// 直接打开不报错） -->
+<meta name="theme-color" content="#B8707A">
+<meta name="application-name" content="小明工作台">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="小明工作台">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23B8707A'/%3E%3Ctext x='50' y='68' font-size='52' text-anchor='middle' fill='white'%3E👶%3C/text%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23B8707A'/%3E%3Ctext x='50' y='68' font-size='52' text-anchor='middle' fill='white'%3E👶%3C/text%3E%3C/svg%3E">
+<script>
+// 仅 HTTP 协议下加载 manifest.json（PWA 安装用）
+if (location.protocol.startsWith('http')) {
+  var m = document.createElement('link');
+  m.rel = 'manifest';
+  m.href = 'manifest.json';
+  document.head.appendChild(m);
+}
+</script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&display=swap');
+
+  :root {
+    --bg: #FBF5F2;
+    --card-bg: rgba(255, 252, 250, 0.95);
+    --primary: #B8707A;
+    --primary-light: #C89098;
+    --accent: #D4A0AC;
+    --accent-warm: #E8B5B8;
+    --text: #4A3640;
+    --text-light: #8A7A82;
+    --border: rgba(184, 112, 122, 0.15);
+    --shadow: rgba(74, 54, 64, 0.08);
+    --baby-pink: #E8B5B8;
+    --baby-pink-light: #F9E6E8;
+    --baby-yellow: #E8D5A8;
+    --period: #C87070;
+    --happy: #E8B86D;
+    --good: #E8D5A8;
+    --good-warm: #D4A373;
+    --angry: #D49090;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 14px;
+    background-image:
+      radial-gradient(circle at 20% 80%, rgba(212, 160, 172, 0.10) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(184, 112, 122, 0.06) 0%, transparent 50%);
+  }
+
+  .container { max-width: 1200px; margin: 0 auto; }
+
+  header { text-align: center; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+  header h1 { font-size: 1.4rem; font-weight: 700; color: var(--primary); letter-spacing: 3px; margin-bottom: 4px; }
+  header .subtitle { font-size: 0.75rem; color: var(--text-light); letter-spacing: 1.5px; }
+  header .date-display { margin-top: 6px; font-size: 0.72rem; color: var(--accent); font-weight: 600; }
+
+  .dashboard { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .span-2 { grid-column: span 2; }
+  .row-span-2 { grid-row: span 2; }
+
+  .card {
+    background: var(--card-bg); border-radius: 16px; padding: 18px;
+    border: 1px solid var(--border); box-shadow: 0 4px 16px var(--shadow);
+    backdrop-filter: blur(8px);
+    animation: fadeIn 0.5s ease forwards;
+  }
+  .card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+  .card-icon { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; }
+  .card-title { font-size: 1rem; font-weight: 600; color: var(--primary); letter-spacing: 1px; }
+  .card-subtitle { font-size: 0.68rem; color: var(--text-light); margin-top: 1px; }
+
+  .btn {
+    padding: 9px 16px; border: none; border-radius: 10px;
+    background: linear-gradient(135deg, var(--primary-light), var(--accent));
+    color: white; font-family: inherit; font-size: 0.82rem; font-weight: 600; cursor: pointer;
+    transition: all 0.2s ease; letter-spacing: 1px;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-outline { background: transparent; border: 1.5px solid var(--accent); color: var(--primary); }
+  .btn-sm { padding: 6px 12px; font-size: 0.72rem; }
+
+  input, textarea {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px;
+    background: rgba(255,255,255,0.6); font-family: inherit; font-size: 0.82rem; color: var(--text);
+  }
+  input:focus, textarea:focus { outline: none; border-color: var(--accent-warm); }
+  textarea { resize: vertical; min-height: 50px; }
+
+  /* === 育儿: 月龄 === */
+  .baby-age-card .card-icon { background: linear-gradient(135deg, var(--baby-pink-light), var(--baby-yellow)); }
+  .baby-hero { display: flex; align-items: center; gap: 18px; padding: 18px; background: linear-gradient(135deg, var(--baby-pink-light), rgba(232,213,168,0.3)); border-radius: 14px; margin-bottom: 14px; }
+  .baby-hero-left { text-align: center; flex-shrink: 0; }
+  .baby-avatar { font-size: 2.6rem; margin-bottom: 6px; }
+  .baby-name { font-size: 1.05rem; font-weight: 700; color: var(--primary); letter-spacing: 2px; }
+  .baby-age-big { font-size: 1.6rem; font-weight: 700; color: var(--primary); }
+  .baby-age-unit { font-size: 0.75rem; color: var(--text-light); }
+  .baby-meta { font-size: 0.68rem; color: var(--text-light); margin-top: 5px; }
+  .baby-motto { flex: 1; min-width: 0; border-left: 2px solid rgba(184,112,122,0.2); padding-left: 16px; }
+  .baby-motto-line { font-size: 0.72rem; font-weight: 600; color: var(--primary); line-height: 2.2; letter-spacing: 1px; text-align: center; }
+
+  /* === 育儿: 辅食安排 === */
+  .food-card .card-icon { background: linear-gradient(135deg, #F5E6D3, #E8D5A8); }
+  .food-content { display: flex; flex-direction: column; gap: 10px; }
+  .food-stage { padding: 10px 12px; background: linear-gradient(135deg, rgba(232,213,168,0.15), rgba(232,181,184,0.08)); border-radius: 10px; }
+  .food-stage-label { font-size: 0.58rem; color: var(--text-light); margin-bottom: 4px; letter-spacing: 1px; }
+  .food-stage-name { font-size: 0.82rem; font-weight: 700; color: var(--primary); margin-bottom: 4px; }
+  .food-stage-desc { font-size: 0.66rem; color: var(--text); line-height: 1.55; }
+  .food-log { display: flex; flex-direction: column; }
+  .food-input-row { display: flex; gap: 6px; align-items: center; margin-bottom: 8px; }
+  .food-input-row input { flex: 1; min-width: 0; font-size: 0.76rem; }
+  .food-list { max-height: 90px; overflow-y: auto; }
+  .food-empty { text-align: center; color: var(--text-light); font-size: 0.68rem; padding: 10px 8px; }
+  .food-item { display: flex; align-items: center; gap: 6px; padding: 5px 8px; background: rgba(232,213,168,0.08); border-radius: 8px; margin-bottom: 4px; font-size: 0.7rem; }
+  .food-item-date { font-size: 0.58rem; color: var(--text-light); flex-shrink: 0; }
+  .food-item-text { flex: 1; min-width: 0; word-break: break-all; }
+  .food-del { background: none; border: none; color: var(--text-light); font-size: 0.7rem; cursor: pointer; padding: 0 4px; flex-shrink: 0; opacity: 0.5; }
+
+  /* === 育儿: 疫苗 === */
+  .vaccine-card .card-icon { background: linear-gradient(135deg, #D4E8D4, #B8D4C8); }
+  .vaccine-summary { display: flex; gap: 8px; margin-bottom: 10px; }
+  .vaccine-stat { flex: 1; text-align: center; padding: 7px 4px; border-radius: 10px; }
+  .vaccine-stat.done { background: rgba(168,197,168,0.15); }
+  .vaccine-stat.next { background: rgba(232,181,184,0.15); }
+  .vaccine-stat-num { font-size: 1.05rem; font-weight: 700; }
+  .vaccine-stat.done .vaccine-stat-num { color: #6B9B6B; }
+  .vaccine-stat.next .vaccine-stat-num { color: var(--primary); }
+  .vaccine-stat-label { font-size: 0.58rem; color: var(--text-light); margin-top: 2px; }
+  .vaccine-list { max-height: 200px; overflow-y: auto; }
+  .vaccine-item { display: flex; align-items: center; gap: 7px; padding: 6px 8px; border-radius: 8px; margin-bottom: 4px; font-size: 0.72rem; border: 1px solid var(--border); background: rgba(255,255,255,0.5); }
+  .vaccine-item.done { opacity: 0.6; }
+  .vaccine-item.next { background: var(--baby-pink-light); border-color: var(--baby-pink); }
+  .vaccine-check { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; font-size: 0.6rem; color: white; }
+  .vaccine-item.done .vaccine-check { background: #6B9B6B; border-color: #6B9B6B; }
+  .vaccine-info { flex: 1; min-width: 0; }
+  .vaccine-name-text { font-weight: 600; }
+  .vaccine-month { font-size: 0.6rem; color: var(--text-light); }
+  .vaccine-tag { padding: 2px 6px; border-radius: 7px; font-size: 0.56rem; font-weight: 600; flex-shrink: 0; }
+  .vaccine-tag.free { background: rgba(107,155,107,0.15); color: #5A8A5A; }
+  .vaccine-tag.paid { background: rgba(232,181,90,0.15); color: #B8843A; }
+  .vaccine-tag.now { background: var(--baby-pink); color: white; }
+  .vaccine-next-box { background: linear-gradient(135deg, var(--baby-pink-light), rgba(232,213,168,0.2)); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; border: 1.5px solid var(--baby-pink); }
+  .vaccine-next-box.empty { text-align: center; color: var(--text-light); font-size: 0.72rem; padding: 14px; border-color: var(--border); background: rgba(168,197,168,0.1); }
+  .vaccine-next-label { font-size: 0.6rem; color: var(--text-light); margin-bottom: 3px; }
+  .vaccine-next-name { font-size: 0.92rem; font-weight: 700; color: var(--primary); margin-bottom: 4px; }
+  .vaccine-next-meta { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .vaccine-next-date { font-size: 0.68rem; color: var(--accent-warm); font-weight: 600; }
+  .vaccine-next-month { font-size: 0.64rem; color: var(--text-light); }
+  .vaccine-next-countdown { font-size: 0.64rem; color: var(--baby-pink); margin-top: 4px; font-weight: 600; }
+  .vaccine-expand-btn { text-align: center; padding: 8px; cursor: pointer; color: var(--accent-warm); font-size: 0.7rem; font-weight: 600; border-top: 1px dashed var(--border); transition: all 0.2s ease; }
+  .vaccine-expand-btn:active { background: rgba(184,112,122,0.04); }
+  .vaccine-full-list { margin-top: 8px; animation: fadeIn 0.3s ease; }
+  .vaccine-date { font-size: 0.58rem; color: var(--accent-warm); margin-top: 2px; font-weight: 600; }
+  .vaccine-item.done .vaccine-date { color: var(--text-light); }
+  .vaccine-section-divider { font-size: 0.64rem; color: var(--text-light); font-weight: 600; margin: 8px 0 5px; padding: 3px 0; border-top: 1px dashed var(--border); }
+  .vaccine-del-btn { background: none; border: none; color: var(--text-light); font-size: 0.7rem; cursor: pointer; padding: 4px 6px; flex-shrink: 0; opacity: 0.5; }
+  .vaccine-del-btn:active { opacity: 1; color: var(--angry); }
+  .vaccine-add-row { display: flex; gap: 6px; align-items: center; margin-top: 10px; padding: 8px; background: rgba(184,112,122,0.04); border-radius: 10px; }
+  .vaccine-add-row input { padding: 6px 8px; font-size: 0.72rem; }
+
+  /* === 生长曲线 === */
+  .growth-card .card-icon { background: linear-gradient(135deg, #D4E8D4, #B8D4C8); }
+  .growth-latest { display: flex; gap: 8px; margin-bottom: 12px; }
+  .growth-stat { flex: 1; text-align: center; padding: 10px 4px; border-radius: 10px; }
+  .growth-stat.weight { background: rgba(232,181,184,0.12); }
+  .growth-stat.height { background: rgba(168,197,168,0.12); }
+  .growth-stat.head { background: rgba(212,163,115,0.12); }
+  .growth-stat-val { font-size: 1.15rem; font-weight: 700; }
+  .growth-stat.weight .growth-stat-val { color: var(--baby-pink); }
+  .growth-stat.height .growth-stat-val { color: #6B9B6B; }
+  .growth-stat.head .growth-stat-val { color: var(--accent-warm); }
+  .growth-stat-unit { font-size: 0.6rem; color: var(--text-light); }
+  .growth-stat-lbl { font-size: 0.62rem; color: var(--text-light); margin-top: 2px; }
+  .growth-stat-date { font-size: 0.55rem; color: var(--text-light); margin-top: 1px; opacity: 0.7; }
+  .growth-tabs { display: flex; gap: 6px; margin-bottom: 8px; }
+  .growth-tab { flex: 1; padding: 7px; border: 1px solid var(--border); border-radius: 8px; background: transparent; color: var(--text-light); font-family: inherit; font-size: 0.72rem; font-weight: 600; cursor: pointer; text-align: center; }
+  .growth-tab.active { background: var(--primary); color: white; border-color: var(--primary); }
+  .growth-chart-wrap { position: relative; height: 180px; background: rgba(255,255,255,0.4); border-radius: 10px; padding: 8px; margin-bottom: 10px; }
+  .growth-input-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; padding: 8px; background: rgba(184,112,122,0.04); border-radius: 10px; }
+  .growth-input-row input { flex: 1; min-width: 0; padding: 6px 8px; font-size: 0.72rem; }
+  .growth-input-row input[type="date"] { max-width: 130px; flex: 0 1 130px; }
+  .growth-input-row input[type="number"] { max-width: 70px; flex: 1 1 70px; }
+  .growth-input-lbl { font-size: 0.6rem; color: var(--text-light); white-space: nowrap; }
+  .growth-empty { text-align: center; color: var(--text-light); font-size: 0.72rem; padding: 16px 8px; }
+
+  /* === 链接学习笔记 === */
+  .link-card .card-icon { background: linear-gradient(135deg, #E0E8F5, #D4C8E8); }
+  .link-input-row { display: flex; gap: 6px; margin-bottom: 8px; }
+  .link-input-row input { flex: 1; min-width: 0; }
+  .platform-hint { font-size: 0.66rem; color: var(--text-light); margin-bottom: 8px; line-height: 1.5; }
+  .content-paste { min-height: 70px; margin-bottom: 8px; }
+  .assist-btn { padding: 7px 12px; border: 1px dashed var(--accent); border-radius: 8px; background: transparent; color: var(--accent); font-family: inherit; font-size: 0.7rem; cursor: pointer; margin-bottom: 10px; width: 100%; }
+  .note-fields { display: grid; gap: 10px; margin-bottom: 14px; }
+  .note-field label { display: block; font-size: 0.7rem; font-weight: 600; color: var(--primary); margin-bottom: 6px; letter-spacing: 0.5px; }
+  .tag-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .tag-chip { padding: 3px 9px; border-radius: 10px; background: rgba(184,112,122,0.06); font-size: 0.65rem; color: var(--text-light); cursor: pointer; }
+  .tag-chip.active { background: var(--primary); color: white; }
+  .link-notes-list { max-height: 320px; overflow-y: auto; margin-top: 10px; }
+  .link-note-item { padding: 12px; background: rgba(184,112,122,0.03); border-radius: 10px; margin-bottom: 8px; border-left: 3px solid var(--accent-warm); }
+  .link-note-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; margin-bottom: 6px; }
+  .link-note-platform { font-size: 0.62rem; padding: 2px 6px; border-radius: 6px; font-weight: 600; flex-shrink: 0; }
+  .platform-xhs { background: #FFE0E8; color: #D14B6E; }
+  .platform-dy { background: #E0E8FF; color: #4B6ED1; }
+  .platform-bili { background: #E0F0E8; color: #4BA86E; }
+  .platform-other { background: rgba(184,112,122,0.1); color: var(--text-light); }
+  .link-note-title { word-break: break-all; }
+  .link-note-core { font-size: 0.75rem; line-height: 1.5; }
+  .link-note-core strong { color: var(--primary); }
+  .link-note-tags { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
+  .link-note-tag { font-size: 0.6rem; padding: 2px 6px; border-radius: 6px; background: rgba(184,112,122,0.08); color: var(--primary); }
+  .filter-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .filter-chip { padding: 3px 9px; border-radius: 10px; background: transparent; border: 1px solid var(--border); font-size: 0.65rem; color: var(--text-light); cursor: pointer; font-family: inherit; }
+  .filter-chip.active { background: var(--primary); color: white; border-color: var(--primary); }
+  .save-note-btn { width: 100%; margin-top: 2px; }
+  .notes-section-divider { border-top: 1px dashed var(--border); margin: 20px 0 12px; padding-top: 14px; }
+  .notes-section-title { font-size: 0.74rem; font-weight: 600; color: var(--text-light); margin-bottom: 10px; letter-spacing: 1px; }
+  .delete-btn { background: none; border: none; color: var(--text-light); font-size: 0.85rem; cursor: pointer; padding: 2px 5px; }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+  @media (max-width: 640px) {
+    body { padding: 10px; }
+    header h1 { font-size: 1.2rem; }
+    .dashboard { grid-template-columns: 1fr; }
+    .span-2 { grid-column: span 1; }
+    .row-span-2 { grid-row: span 1; }
+    .card { padding: 14px; }
+    .baby-hero { flex-direction: column; gap: 14px; }
+    .baby-motto { border-left: none; border-top: 1px solid rgba(184,112,122,0.2); padding-left: 0; padding-top: 12px; width: 100%; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>小明的工作台</h1>
+    <div class="subtitle">陪伴成长 · 温柔养育 · 共同学习</div>
+    <div class="date-display" id="currentDate"></div>
+    <div class="sync-status" id="syncStatus" style="font-size:0.65rem;color:var(--text-light);margin-top:4px;"></div>
+  </header>
+
+  <div class="dashboard">
+    <!-- 小明成长档案 -->
+    <div class="card baby-age-card span-2">
+      <div class="card-header">
+        <div class="card-icon">👶</div>
+        <div><div class="card-title">小明成长档案</div><div class="card-subtitle">记录每一寸成长</div></div>
+      </div>
+      <div class="baby-hero">
+        <div class="baby-hero-left">
+          <div class="baby-avatar"><img src="data:image/jpeg;base64,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" alt="小明" style="width:90px;height:90px;border-radius:50%;object-fit:cover;border:3px solid white;box-shadow:0 2px 12px rgba(184,112,122,0.2);"></div>
+          <div class="baby-name">小明</div>
+          <div><span class="baby-age-big" id="babyAgeMonths">0</span><span class="baby-age-unit">个月</span> <span class="baby-age-big" id="babyAgeDays" style="font-size:1.1rem;">0</span><span class="baby-age-unit">天</span></div>
+          <div class="baby-meta">出生：2026年2月15日 · 女宝宝</div>
+        </div>
+        <div class="baby-motto">
+          <div class="baby-motto-line">根深叶茂子兴旺 · 英才辈出耀门庭</div>
+          <div class="baby-motto-line">聪明伶俐福禄厚 · 代代昌盛万年兴</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 辅食安排 -->
+    <div class="card food-card">
+      <div class="card-header">
+        <div class="card-icon">🍼</div>
+        <div><div class="card-title">辅食安排</div><div class="card-subtitle">每日打卡 · 科学添加</div></div>
+      </div>
+      <div class="food-content">
+        <div class="food-stage" id="foodStage"></div>
+        <div class="food-log">
+          <div class="food-input-row">
+            <input type="text" id="foodInput" placeholder="今日辅食打卡（如：南瓜米糊 30ml）">
+            <button class="btn btn-sm" onclick="addFoodRecord()">记录</button>
+          </div>
+          <div class="food-list" id="foodList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 链接学习笔记 -->
+    <div class="card link-card">
+      <div class="card-header">
+        <div class="card-icon">🔗</div>
+        <div><div class="card-title">链接学习笔记</div><div class="card-subtitle">提取要点 · 沉淀学习</div></div>
+      </div>
+      <div class="platform-hint">💡 粘贴小红书/抖音/B站链接，再把内容文字粘贴到下方，帮你整理学习要点。</div>
+      <div class="link-input-row">
+        <input type="text" id="linkUrl" placeholder="粘贴链接（小红书/抖音/B站等）">
+        <button class="btn btn-sm" onclick="parseLink()">识别</button>
+      </div>
+      <textarea class="content-paste" id="linkContent" placeholder="把链接里的文字内容粘贴到这里..."></textarea>
+      <button class="assist-btn" onclick="assistExtract()">✨ 辅助提取要点（自动分析关键句）</button>
+      <div class="note-fields">
+        <div class="note-field"><label>我要学习/行动的</label><textarea id="noteLearn" placeholder="我要学什么？要做什么？"></textarea></div>
+        <div class="note-field"><label>标签</label>
+          <div class="tag-chips">
+            <span class="tag-chip" onclick="toggleTag(this)">英语学习</span>
+            <span class="tag-chip" onclick="toggleTag(this)">育儿知识</span>
+            <span class="tag-chip" onclick="toggleTag(this)">辅食</span>
+            <span class="tag-chip" onclick="toggleTag(this)">早教</span>
+            <span class="tag-chip" onclick="toggleTag(this)">睡眠</span>
+            <span class="tag-chip" onclick="toggleTag(this)">心理学</span>
+            <span class="tag-chip" onclick="toggleTag(this)">内容灵感</span>
+          </div>
+        </div>
+      </div>
+      <button class="btn save-note-btn" onclick="saveLinkNote()">保存笔记</button>
+      <div class="notes-section-divider">
+        <div class="notes-section-title">我的笔记</div>
+        <div class="filter-chips">
+          <span class="filter-chip active" onclick="filterNotes('all', this)">全部</span>
+          <span class="filter-chip" onclick="filterNotes('英语学习', this)">英语学习</span>
+          <span class="filter-chip" onclick="filterNotes('育儿知识', this)">育儿知识</span>
+          <span class="filter-chip" onclick="filterNotes('早教', this)">早教</span>
+        </div>
+      </div>
+      <div class="link-notes-list" id="linkNotesList"></div>
+    </div>
+
+    <!-- 疫苗接种 -->
+    <div class="card vaccine-card">
+      <div class="card-header">
+        <div class="card-icon">💉</div>
+        <div><div class="card-title">疫苗接种</div><div class="card-subtitle">下一针提醒 · 点击展开全部</div></div>
+      </div>
+      <div id="vaccineNextBox" class="vaccine-next-box"></div>
+      <div class="vaccine-expand-btn" id="vaccineExpandBtn" onclick="toggleVaccineList()">
+        <span id="vaccineExpandText">查看全部疫苗 ▾</span>
+      </div>
+      <div class="vaccine-full-list" id="vaccineFullList" style="display:none;">
+        <div class="vaccine-summary">
+          <div class="vaccine-stat done"><div class="vaccine-stat-num" id="vaccineDoneCount">0</div><div class="vaccine-stat-label">已完成</div></div>
+          <div class="vaccine-stat next"><div class="vaccine-stat-num" id="vaccineNextCount">0</div><div class="vaccine-stat-label">待接种</div></div>
+        </div>
+        <div class="vaccine-list" id="vaccineList"></div>
+      </div>
+    </div>
+
+    <!-- 生长曲线 -->
+    <div class="card growth-card">
+      <div class="card-header">
+        <div class="card-icon">📏</div>
+        <div><div class="card-title">生长曲线</div><div class="card-subtitle">记录每一次成长的痕迹</div></div>
+      </div>
+      <div class="growth-latest" id="growthLatest"></div>
+      <div class="growth-tabs">
+        <button class="growth-tab active" data-metric="weight" onclick="switchGrowthTab('weight')">体重</button>
+        <button class="growth-tab" data-metric="height" onclick="switchGrowthTab('height')">身高</button>
+        <button class="growth-tab" data-metric="head" onclick="switchGrowthTab('head')">头围</button>
+      </div>
+      <div class="growth-chart-wrap"><canvas id="growthChart"></canvas></div>
+      <div class="growth-input-row">
+        <input type="date" id="growthDate">
+        <span class="growth-input-lbl">体重kg</span><input type="number" id="growthWeight" step="0.01" placeholder="6.5">
+        <span class="growth-input-lbl">身长cm</span><input type="number" id="growthHeight" step="0.1" placeholder="62">
+        <span class="growth-input-lbl">头围cm</span><input type="number" id="growthHead" step="0.1" placeholder="40">
+        <button class="btn btn-sm" onclick="addGrowthRecord()">记录</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script>
+// ==================== 云端同步配置 ====================
+// 使用 Gitee（码云）代码片段免费云端存储，实现两人数据共享
+// ✅ 已配置完成，直接使用即可
+const CLOUD = {
+  TOKEN: '80efc4ceaba247386f445a902faf8540',
+  GIST_ID: 'ci5g2rzf8e7luxs0abdy496',
+  URL: 'https://gitee.com/api/v5/gists'
+};
+
+let cloudReady = false;
+let lastSyncTime = 0;
+let isSyncing = false;
+
+// 检查云端是否已配置
+function checkCloud(){ cloudReady = CLOUD.TOKEN && CLOUD.GIST_ID; }
+
+// 保存所有数据到云端（Gitee Gist）
+async function saveToCloud(){
+  if(!cloudReady || isSyncing) return;
+  isSyncing = true;
+  try{
+    const allData = {};
+    Object.keys(localStorage).forEach(k => { if(k.startsWith('wb_')) allData[k] = localStorage.getItem(k); });
+    allData._syncTime = Date.now();
+    const res = await fetch(CLOUD.URL+'/'+CLOUD.GIST_ID, {
+      method:'PATCH',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        access_token: CLOUD.TOKEN,
+        files: { 'data.json': { content: JSON.stringify(allData) } }
+      })
+    });
+    if(res.ok) lastSyncTime = Date.now();
+  }catch(e){ console.log('云端保存失败:',e); }
+  isSyncing = false;
+}
+
+// 从云端加载数据（Gitee Gist）
+async function loadFromCloud(){
+  if(!cloudReady || isSyncing) return;
+  isSyncing = true;
+  try{
+    const res = await fetch(CLOUD.URL+'/'+CLOUD.GIST_ID+'?access_token='+CLOUD.TOKEN);
+    if(!res.ok){ isSyncing=false; return; }
+    const data = await res.json();
+    const file = data.files && data.files['data.json'];
+    if(!file || !file.content){ isSyncing=false; return; }
+    const cloudData = JSON.parse(file.content);
+    if(!cloudData || !cloudData._syncTime){ isSyncing=false; return; }
+    if(cloudData._syncTime > lastSyncTime){
+      let changed = false;
+      Object.keys(cloudData).forEach(k => {
+        if(k.startsWith('wb_')){
+          const localVal = localStorage.getItem(k);
+          if(localVal !== cloudData[k]){
+            localStorage.setItem(k, cloudData[k]);
+            changed = true;
+          }
+        }
+      });
+      lastSyncTime = cloudData._syncTime;
+      if(changed){ location.reload(); }
+    }
+  }catch(e){ console.log('云端加载失败:',e); }
+  isSyncing = false;
+}
+
+// ==================== 通用 ====================
+const KEYS = { vaccines:'wb_vaccines', customVaccines:'wb_customVaccines', growth:'wb_growth', linkNotes:'wb_linkNotes', food:'wb_food' };
+const getToday = () => new Date().toISOString().split('T')[0];
+const formatTime = d => new Date(d).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
+const loadData = (k, def=[]) => { try { const d = localStorage.getItem(k); return d ? JSON.parse(d) : def; } catch { return def; } };
+const saveData = (k,d) => { localStorage.setItem(k, JSON.stringify(d)); saveToCloud(); };
+
+document.getElementById('currentDate').textContent = new Date().toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
+
+// ==================== 育儿: 月龄 ====================
+const babyBirth = new Date('2026-02-15');
+function calcBabyAge(){
+  const now=new Date();
+  let months=(now.getFullYear()-babyBirth.getFullYear())*12+(now.getMonth()-babyBirth.getMonth());
+  if(now.getDate()<babyBirth.getDate()) months--;
+  const lastMonthDate=new Date(babyBirth.getFullYear(),babyBirth.getMonth()+months,babyBirth.getDate());
+  const days=Math.floor((now-lastMonthDate)/(1000*60*60*24));
+  document.getElementById('babyAgeMonths').textContent=months;
+  document.getElementById('babyAgeDays').textContent=days;
+}
+calcBabyAge();
+
+// ==================== 辅食安排 ====================
+const foodStages={
+  0:{name:'纯奶期',desc:'0-5月龄，母乳或配方奶为主，无需添加辅食。'},
+  6:{name:'初期辅食',desc:'6月龄起，从富铁米粉开始，逐样添加泥糊状食物，每次1-2勺。'},
+  7:{name:'丰富口感期',desc:'7-8月龄，增加颗粒感，尝试肉泥、蛋黄、菜末，每天1-2餐。'},
+  9:{name:'进阶咀嚼期',desc:'9-11月龄，软碎块食物，手指食物，每天2-3餐+加餐。'},
+  12:{name:'过渡家庭餐',desc:'12月龄+，逐步过渡到家庭饮食，少盐少糖，3餐+加餐。'}
+};
+let foodRecords = loadData(KEYS.food,[]);
+function renderFoodStage(){
+  const m=getBabyMonths();
+  let stage=foodStages[0];
+  for(const k of Object.keys(foodStages).map(Number).sort((a,b)=>a-b)){ if(k<=m) stage=foodStages[k]; }
+  document.getElementById('foodStage').innerHTML=`<div class="food-stage-label">🍼 当前阶段（${m}月龄）</div><div class="food-stage-name">${stage.name}</div><div class="food-stage-desc">${stage.desc}</div>`;
+}
+function renderFoodList(){
+  const el=document.getElementById('foodList');
+  if(!foodRecords.length){ el.innerHTML='<div class="food-empty">还没有辅食记录，开始打卡吧 🍼</div>'; return; }
+  const recent=foodRecords.map((f,i)=>({f,i})).slice(-8).reverse();
+  el.innerHTML=recent.map(({f,i})=>{
+    return `<div class="food-item"><span class="food-item-date">${f.date.substring(5)}</span><span class="food-item-text">${f.text}</span><button class="food-del" onclick="deleteFood(${i})">✕</button></div>`;
+  }).join('');
+}
+function addFoodRecord(){
+  const input=document.getElementById('foodInput');
+  const text=input.value.trim();
+  if(!text) return;
+  foodRecords.push({date:getToday(),text:text});
+  saveData(KEYS.food,foodRecords);
+  input.value='';
+  renderFoodList();
+}
+function deleteFood(i){
+  foodRecords.splice(i,1);
+  saveData(KEYS.food,foodRecords);
+  renderFoodList();
+}
+renderFoodStage();
+renderFoodList();
+
+// ==================== 生长曲线 ====================
+let growthRecords = loadData(KEYS.growth,[]);
+let growthMetric = 'weight';
+let growthChartObj = null;
+document.getElementById('growthDate').value = getToday();
+// WHO女婴参考中位数（0-24月）
+const whoRef = {
+  weight: {months:[0,1,2,3,4,5,6,8,12,18,24], vals:[3.2,4.2,5.1,5.8,6.4,6.9,7.3,7.9,9.0,10.5,11.5]},
+  height:  {months:[0,1,2,3,4,5,6,8,12,18,24], vals:[49.1,53.7,57.1,59.8,62.1,64.0,65.7,68.2,74.0,80.7,86.4]},
+  head:    {months:[0,1,2,3,4,5,6,8,12,18,24], vals:[33.9,37.3,39.1,40.5,41.6,42.6,43.3,44.3,45.8,47.0,48.0]}
+};
+const growthMeta = {
+  weight: {label:'体重', unit:'kg', color:'#B8707A', colorBg:'rgba(184,112,122,0.1)'},
+  height:  {label:'身长', unit:'cm', color:'#6B9B6B', colorBg:'rgba(107,155,107,0.1)'},
+  head:    {label:'头围', unit:'cm', color:'#D4A373', colorBg:'rgba(212,163,115,0.1)'}
+};
+function getBabyMonths(){ const n=new Date();let m=(n.getFullYear()-babyBirth.getFullYear())*12+(n.getMonth()-babyBirth.getMonth());if(n.getDate()<babyBirth.getDate())m--;return Math.max(0,m); }
+function renderGrowthLatest(){
+  const el = document.getElementById('growthLatest');
+  if(!growthRecords.length){
+    el.innerHTML = '<div class="growth-empty">还没有记录，快添加第一笔吧 📐</div>';
+    return;
+  }
+  const latest = growthRecords[growthRecords.length-1];
+  const d = latest.date;
+  const fmtDate = `${d.substring(5,7)}-${d.substring(8,10)}`;
+  const items = [
+    {key:'weight', val:latest.weight, cls:'weight'},
+    {key:'height', val:latest.height, cls:'height'},
+    {key:'head', val:latest.head, cls:'head'}
+  ];
+  el.innerHTML = items.map(it=>{
+    const meta = growthMeta[it.key];
+    return `<div class="growth-stat ${it.cls}"><div class="growth-stat-val">${it.val||'-'}<span class="growth-stat-unit">${meta.unit}</span></div><div class="growth-stat-lbl">${meta.label}</div><div class="growth-stat-date">${fmtDate}</div></div>`;
+  }).join('');
+}
+function renderGrowthChart(){
+  const meta = growthMeta[growthMetric];
+  const ctx = document.getElementById('growthChart');
+  if(growthChartObj) growthChartObj.destroy();
+  const valid = growthRecords.filter(r=>r[growthMetric]!=null && r[growthMetric]!=='' && !isNaN(r[growthMetric]));
+  const userPts = valid.map(r=>{
+    const days=Math.floor((new Date(r.date)-babyBirth)/(1000*60*60*24));
+    return {x:`${days}天`, y:parseFloat(r[growthMetric])};
+  });
+  const refPts = whoRef[growthMetric].months.map((m,i)=>({x:`${Math.round(m*30.4)}天`, y:whoRef[growthMetric].vals[i]}));
+  // 组合x轴
+  const allLabels = [...userPts.map(p=>p.x), ...refPts.map(p=>p.x)];
+  const xSet = new Set(allLabels);
+  const xLabels = Array.from(xSet).sort((a,b)=>parseInt(a)-parseInt(b));
+  growthChartObj = new Chart(ctx,{
+    type:'line',
+    data:{labels:xLabels, datasets:[
+      {label:'小明'+meta.label, data:xLabels.map(l=>{const p=userPts.find(p=>p.x===l);return p?p.y:null;}), borderColor:meta.color, backgroundColor:meta.colorBg, tension:0.3, fill:true, pointRadius:4, pointBackgroundColor:meta.color, spanGaps:true},
+      {label:'WHO参考', data:xLabels.map(l=>{const p=refPts.find(p=>p.x===l);return p?p.y:null;}), borderColor:'rgba(184,112,122,0.35)', borderDash:[4,4], pointRadius:2, fill:false, tension:0.3, spanGaps:true}
+    ]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:true,labels:{font:{size:10},boxWidth:12}},tooltip:{callbacks:{label:c=>c.parsed.y!=null?c.dataset.label+': '+c.parsed.y+meta.unit:''}}},
+      scales:{
+        x:{ticks:{font:{size:9},maxRotation:45,maxTicksLimit:8},grid:{display:false}},
+        y:{ticks:{font:{size:9}},grid:{color:'rgba(184,112,122,0.08)'}}
+      }
+    }
+  });
+}
+function switchGrowthTab(metric){
+  growthMetric = metric;
+  document.querySelectorAll('.growth-tab').forEach(t=>t.classList.toggle('active',t.dataset.metric===metric));
+  renderGrowthChart();
+}
+function addGrowthRecord(){
+  const date=document.getElementById('growthDate').value;
+  const w=parseFloat(document.getElementById('growthWeight').value);
+  const h=parseFloat(document.getElementById('growthHeight').value);
+  const hd=parseFloat(document.getElementById('growthHead').value);
+  if(!date){alert('请选择日期');return;}
+  if(isNaN(w)&&isNaN(h)&&isNaN(hd)){alert('至少填写一项测量数据');return;}
+  // 如果同一天已有记录，更新它
+  const idx=growthRecords.findIndex(r=>r.date===date);
+  const rec={date, weight:isNaN(w)?(idx>=0?growthRecords[idx].weight:''):w, height:isNaN(h)?(idx>=0?growthRecords[idx].height:''):h, head:isNaN(hd)?(idx>=0?growthRecords[idx].head:''):hd};
+  if(idx>=0) growthRecords[idx]=rec;
+  else {growthRecords.push(rec);growthRecords.sort((a,b)=>a.date.localeCompare(b.date));}
+  saveData(KEYS.growth,growthRecords);
+  document.getElementById('growthWeight').value='';
+  document.getElementById('growthHeight').value='';
+  document.getElementById('growthHead').value='';
+  renderGrowthLatest();
+  renderGrowthChart();
+}
+renderGrowthLatest();
+renderGrowthChart();
+
+// ==================== 疫苗 ====================
+// 2026年最新国家免疫规划疫苗程序
+const vaccineSchedule=[
+  {month:0,name:'乙肝疫苗第1剂',type:'free',desc:'出生时'},
+  {month:0,name:'卡介苗',type:'free',desc:'出生时'},
+  {month:1,name:'乙肝疫苗第2剂',type:'free'},
+  {month:2,name:'脊灰灭活疫苗第1剂',type:'free'},
+  {month:2,name:'百白破第1剂',type:'free'},
+  {month:2,name:'五价轮状病毒第1剂',type:'paid',desc:'自费优选'},
+  {month:3,name:'脊灰疫苗第2剂',type:'free'},
+  {month:3,name:'13价肺炎第1剂',type:'paid'},
+  {month:4,name:'脊灰疫苗第3剂',type:'free'},
+  {month:4,name:'百白破第2剂',type:'free'},
+  {month:4,name:'13价肺炎第2剂',type:'paid'},
+  {month:5,name:'13价肺炎第3剂',type:'paid'},
+  {month:6,name:'乙肝疫苗第3剂',type:'free'},
+  {month:6,name:'A群流脑第1剂',type:'free'},
+  {month:6,name:'百白破第3剂',type:'free'},
+  {month:6,name:'13价肺炎第4剂',type:'paid',desc:'基础免疫完成'},
+  {month:6,name:'流感疫苗',type:'paid',desc:'6月龄以上每年可打'},
+  {month:7,name:'五价轮状病毒第3剂',type:'paid'},
+  {month:8,name:'麻腮风疫苗第1剂',type:'free'},
+  {month:8,name:'乙脑减毒第1剂',type:'free'},
+  {month:8,name:'手足口疫苗第1剂',type:'paid',desc:'2剂间隔1月'},
+  {month:9,name:'A群流脑第2剂',type:'free'},
+  {month:12,name:'水痘疫苗第1剂',type:'paid',desc:'入园刚需'},
+  {month:18,name:'百白破第4剂',type:'free'},
+  {month:18,name:'麻腮风疫苗第2剂',type:'free'},
+  {month:18,name:'甲肝疫苗',type:'free'},
+  {month:24,name:'乙脑加强',type:'free'},
+  {month:36,name:'A+C群流脑多糖第1剂',type:'free'},
+  {month:48,name:'脊灰加强',type:'free'},
+  {month:72,name:'百白破加强',type:'free'}
+];
+let vaccineData = loadData(KEYS.vaccines,{});
+// 数据迁移：旧格式 true → 新格式 {checked:true, date:''}
+Object.keys(vaccineData).forEach(k=>{ if(vaccineData[k]===true) vaccineData[k]={checked:true, date:''}; });
+let customVaccines = loadData(KEYS.customVaccines,[]);
+let vaccineExpanded = false;
+// 疫苗数据结构: vaccineData[i] = { checked:true, date:'YYYY-MM-DD' } 或不存在
+function renderVaccines(){
+  const babyM=getBabyMonths(); let done=0,next=0,nextItem=null;
+  vaccineSchedule.forEach((v,i)=>{
+    const rec=vaccineData[i];
+    if(rec&&rec.checked)done++;
+    else { next++; if(v.month>=babyM&&!nextItem)nextItem={v:v,i:i}; }
+  });
+  customVaccines.forEach((v,i)=>{
+    const rec=vaccineData['c'+i];
+    if(rec&&rec.checked)done++;
+    else { next++; if(v.month>=babyM&&!nextItem)nextItem={v:v,i:-1,ci:i}; }
+  });
+  // 下一针：只显示建议月龄，不自动设定接种日期
+  const nextBox=document.getElementById('vaccineNextBox');
+  if(nextItem){
+    const v=nextItem.v, reached=v.month<=babyM;
+    nextBox.className='vaccine-next-box';
+    nextBox.innerHTML=`<div class="vaccine-next-label">⏰ 下一针</div><div class="vaccine-next-name">${v.name}</div><div class="vaccine-next-meta"><span class="vaccine-next-month">建议 ${v.month} 月龄</span><span class="vaccine-tag ${v.type}">${v.type==='free'?'免费':'自费'}</span>${v.desc?`<span class="vaccine-next-month">· ${v.desc}</span>`:''}</div>${reached?'<div class="vaccine-next-countdown">已到接种月龄，接种后请记录</div>':`<div class="vaccine-next-countdown">预计 ${v.month} 月龄时接种</div>`}`;
+  } else {
+    nextBox.className='vaccine-next-box empty';
+    nextBox.innerHTML='✓ 全部疫苗接种已完成';
+  }
+  // 列表：已接种显示你自己记录的实际日期，未接种只显示建议月龄
+  let html=vaccineSchedule.map((v,i)=>{
+    const rec=vaccineData[i], checked=rec&&rec.checked;
+    let cls='vaccine-item'; if(checked)cls+=' done';
+    const overdue=!checked&&v.month<babyM?'<span style="color:var(--angry);font-size:0.6rem;"> ⚠ 逾期</span>':'';
+    const dateStr=checked&&rec.date?`<div class="vaccine-date">📅 接种日期 ${rec.date}</div>`:'';
+    return `<div class="${cls}"><div class="vaccine-check" onclick="toggleVaccine(${i})">${checked?'✓':''}</div><div class="vaccine-info"><div class="vaccine-name-text">${v.name}${overdue}</div><div class="vaccine-month">建议 ${v.month} 月龄${v.desc?' · '+v.desc:''}</div>${dateStr}</div><span class="vaccine-tag ${v.type}">${v.type==='free'?'免费':'自费'}</span></div>`;
+  }).join('');
+  if(customVaccines.length){
+    html+='<div class="vaccine-section-divider">自费/自选疫苗</div>';
+    html+=customVaccines.map((v,i)=>{
+      const rec=vaccineData['c'+i], checked=rec&&rec.checked;
+      let cls='vaccine-item'; if(checked)cls+=' done';
+      const overdue=!checked&&v.month<babyM?'<span style="color:var(--angry);font-size:0.6rem;"> ⚠ 逾期</span>':'';
+      const dateStr=checked&&rec.date?`<div class="vaccine-date">📅 接种日期 ${rec.date}</div>`:'';
+      return `<div class="${cls}"><div class="vaccine-check" onclick="toggleVaccine('c${i}')">${checked?'✓':''}</div><div class="vaccine-info"><div class="vaccine-name-text">${v.name}${overdue}</div><div class="vaccine-month">建议 ${v.month} 月龄${v.desc?' · '+v.desc:''}</div>${dateStr}</div><span class="vaccine-tag paid">自费</span></div>`;
+    }).join('');
+  }
+  document.getElementById('vaccineList').innerHTML=html;
+  document.getElementById('vaccineDoneCount').textContent=done;
+  document.getElementById('vaccineNextCount').textContent=next;
+}
+function toggleVaccineList(){
+  vaccineExpanded=!vaccineExpanded;
+  document.getElementById('vaccineFullList').style.display=vaccineExpanded?'block':'none';
+  document.getElementById('vaccineExpandText').textContent=vaccineExpanded?'收起列表 ▴':'查看全部疫苗 ▾';
+}
+function toggleVaccine(i){
+  const rec=vaccineData[i];
+  if(rec&&rec.checked){
+    // 已接种 → 取消记录
+    if(confirm('确定取消该疫苗接种记录吗？')){
+      delete vaccineData[i];
+      saveData(KEYS.vaccines,vaccineData);
+      renderVaccines();
+    }
+  } else {
+    // 未接种 → 记录实际接种日期
+    const d=prompt('请输入实际接种日期\n（格式 YYYY-MM-DD，如 2026-08-15）',getToday());
+    if(d!==null){
+      const date=d.trim();
+      if(date&&!/^\d{4}-\d{2}-\d{2}$/.test(date)){
+        alert('日期格式不正确，请按 YYYY-MM-DD 格式输入');
+        return;
+      }
+      vaccineData[i]={checked:true, date:date||getToday()};
+      saveData(KEYS.vaccines,vaccineData);
+      renderVaccines();
+    }
+  }
+}
+renderVaccines();
+
+// ==================== 链接学习笔记 ====================
+let linkNotes = loadData(KEYS.linkNotes,[]);
+let currentFilter='all';
+function detectPlatform(url){ if(!url)return{key:'other',label:'其他'};const u=url.toLowerCase();if(u.includes('xiaohongshu')||u.includes('xhslink')||u.includes('xhs'))return{key:'xhs',label:'小红书'};if(u.includes('douyin')||u.includes('iesdouyin'))return{key:'dy',label:'抖音'};if(u.includes('bilibili')||u.includes('b23.tv'))return{key:'bili',label:'B站'};if(u.includes('weibo'))return{key:'other',label:'微博'};return{key:'other',label:'其他'}; }
+function parseLink(){ const url=document.getElementById('linkUrl').value.trim();if(!url){alert('请粘贴链接');return;}const p=detectPlatform(url);alert(`已识别：${p.label}\n\n平台限制无法自动抓取，请把正文文字粘贴到下方，我再帮你整理。`); }
+function assistExtract(){
+  const text=document.getElementById('linkContent').value.trim();
+  if(!text||text.length<20){alert('请先粘贴内容文字（至少20字）');return;}
+  const kw=['重点','关键','第一','其次','核心','最重要','建议','需要','应该','记住','必须','总之','因此','所以','其实','真正','学会','要','可以'];
+  const sents=text.split(/[。！？!?\n\r]+/).map(s=>s.trim()).filter(s=>s.length>8);
+  const scored=sents.map(s=>{let sc=0;kw.forEach(k=>{if(s.includes(k))sc+=2;});if(s.length>15&&s.length<60)sc+=1;if(/[一二三四五六七八九十\d]/.test(s))sc+=1;return{s:s,sc:sc};}).sort((a,b)=>b.sc-a.sc).slice(0,4);
+  if(!scored.length){alert('内容太少，请手动填写');return;}
+  const lk=['学习','练习','每天','坚持','试试','尝试','开始','培养','养成'];
+  document.getElementById('noteLearn').value=sents.filter(s=>lk.some(k=>s.includes(k))).slice(0,3).join('；')||scored.map(x=>x.s).join('；');
+  alert('✨ 已提取要点，可编辑后保存。');
+}
+function toggleTag(el){ el.classList.toggle('active'); }
+function saveLinkNote(){
+  const url=document.getElementById('linkUrl').value.trim(),content=document.getElementById('linkContent').value.trim(),learn=document.getElementById('noteLearn').value.trim(),tags=Array.from(document.querySelectorAll('.tag-chip.active')).map(t=>t.textContent);
+  if(!learn&&!content){alert('请至少填写学习要点');return;}
+  const p=detectPlatform(url);
+  linkNotes.unshift({id:Date.now(),url:url,platform:p.key,platformLabel:p.label,content:content.substring(0,200),learn:learn,tags:tags,time:new Date().toISOString()});
+  saveData(KEYS.linkNotes,linkNotes);
+  document.getElementById('linkUrl').value='';document.getElementById('linkContent').value='';document.getElementById('noteLearn').value='';
+  document.querySelectorAll('.tag-chip.active').forEach(t=>t.classList.remove('active'));
+  renderLinkNotes();
+}
+function filterNotes(tag,el){ currentFilter=tag;document.querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');renderLinkNotes(); }
+function renderLinkNotes(){
+  const el=document.getElementById('linkNotesList');
+  let list=linkNotes; if(currentFilter!=='all')list=linkNotes.filter(n=>n.tags&&n.tags.includes(currentFilter));
+  if(!list.length){el.innerHTML='<div style="text-align:center;color:var(--text-light);font-size:0.72rem;padding:12px;">还没有学习笔记 📝</div>';return;}
+  el.innerHTML=list.map(n=>`<div class="link-note-item"><div class="link-note-header"><div><span class="link-note-platform platform-${n.platform}">${n.platformLabel}</span>${n.url?`<div class="link-note-title" style="margin-top:3px;word-break:break-all;font-size:0.75rem;font-weight:600;">${n.url.substring(0,50)}${n.url.length>50?'...':''}</div>`:''}</div><button class="delete-btn" onclick="deleteLinkNote(${n.id})">✕</button></div>${n.learn?`<div class="link-note-core"><strong>学习：</strong>${n.learn}</div>`:''}${n.content?`<div style="font-size:0.68rem;color:var(--text-light);margin-top:5px;line-height:1.5;">${n.content}</div>`:''}${n.tags&&n.tags.length?`<div class="link-note-tags">${n.tags.map(t=>`<span class="link-note-tag">#${t}</span>`).join('')}</div>`:''}<div style="font-size:0.6rem;color:var(--text-light);margin-top:5px;">${formatTime(n.time)}</div></div>`).join('');
+}
+function deleteLinkNote(id){ linkNotes=linkNotes.filter(n=>n.id!==id);saveData(KEYS.linkNotes,linkNotes);renderLinkNotes(); }
+renderLinkNotes();
+// ==================== 云端同步初始化 ====================
+checkCloud();
+if(cloudReady){
+  document.getElementById('syncStatus').textContent='☁️ 已连接云端，数据自动同步';
+  document.getElementById('syncStatus').style.color='#6B9B6B';
+  loadFromCloud();
+  setInterval(loadFromCloud, 10000);
+} else {
+  document.getElementById('syncStatus').textContent='📡 未连接云端（需配置 API Key 才能和老公同步）';
+  document.getElementById('syncStatus').style.color='var(--text-light)';
+}
+</script>
+<script>
+// PWA: 注册 Service Worker（仅 http/https 协议下生效，file:// 本地打开时跳过）
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('sw.js').then(function(reg) {
+      console.log('ServiceWorker 注册成功');
+    }).catch(function(err) {
+      console.log('ServiceWorker 注册失败: ', err);
+    });
+  });
+}
+// iOS Safari 修复：standalone 状态下处理链接跳转
+if (window.navigator.standalone) {
+  document.addEventListener('click', function(e) {
+    var target = e.target;
+    while (target && target.tagName !== 'A') target = target.parentNode;
+    if (target && target.href && target.href.indexOf('http') === 0) {
+      e.preventDefault();
+      window.location = target.href;
+    }
+  });
+}
+</script>
+</body>
+</html>
