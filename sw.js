@@ -1,5 +1,5 @@
 // Service Worker - 小明的工作台
-const CACHE_NAME = 'xm-workbench-v3';
+const CACHE_NAME = 'xm-workbench-v4';
 const CACHE_FILES = [
   'xm.html',
   'manifest.json',
