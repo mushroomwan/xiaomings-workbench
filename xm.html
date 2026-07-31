@@ -168,6 +168,12 @@ if (location.protocol.startsWith('http')) {
   .vaccine-del-btn:active { opacity: 1; color: var(--angry); }
   .vaccine-add-row { display: flex; gap: 6px; align-items: center; margin-top: 10px; padding: 8px; background: rgba(184,112,122,0.04); border-radius: 10px; }
   .vaccine-add-row input { padding: 6px 8px; font-size: 0.72rem; }
+  .vaccine-item-wrap { margin-bottom: 4px; }
+  .vaccine-form { display: none; padding: 6px 8px 8px; background: rgba(184,112,122,0.04); border-radius: 0 0 8px 8px; border: 1px solid var(--border); border-top: none; margin-top: -4px; margin-bottom: 4px; }
+  .vaccine-form.active { display: block; animation: fadeIn 0.2s ease; }
+  .vaccine-form-row { display: flex; gap: 6px; align-items: center; }
+  .vaccine-form-row input[type="date"] { flex: 1; padding: 6px 8px; font-size: 0.72rem; }
+  .vaccine-form-row .btn-sm { padding: 6px 10px; font-size: 0.68rem; }
 
   /* === 生长曲线 === */
   .growth-card .card-icon { background: linear-gradient(135deg, #D4E8D4, #B8D4C8); }
@@ -697,7 +703,10 @@ function renderVaccines(){
     let cls='vaccine-item'; if(checked)cls+=' done';
     const overdue=!checked&&v.month<babyM?'<span style="color:var(--angry);font-size:0.6rem;"> ⚠ 逾期</span>':'';
     const dateStr=checked&&rec.date?`<div class="vaccine-date">📅 接种日期 ${rec.date}</div>`:'';
-    return `<div class="${cls}"><div class="vaccine-check" onclick="toggleVaccine(${i})">${checked?'✓':''}</div><div class="vaccine-info"><div class="vaccine-name-text">${v.name}${overdue}</div><div class="vaccine-month">建议 ${v.month} 月龄${v.desc?' · '+v.desc:''}</div>${dateStr}</div><span class="vaccine-tag ${v.type}">${v.type==='free'?'免费':'自费'}</span></div>`;
+    const formId='vaccineForm_'+i;
+    const dateId='vaccineDate_'+i;
+    const formHtml=checked?'':`<div class="vaccine-form" id="${formId}"><div class="vaccine-form-row"><input type="date" id="${dateId}" value="${getToday()}"><button class="btn btn-sm" onclick="saveVaccineRecord(${i})">保存</button><button class="btn btn-outline btn-sm" onclick="hideVaccineForm('${formId}')">取消</button></div></div>`;
+    return `<div class="vaccine-item-wrap"><div class="${cls}"><div class="vaccine-check" onclick="toggleVaccine(${i})">${checked?'✓':''}</div><div class="vaccine-info"><div class="vaccine-name-text">${v.name}${overdue}</div><div class="vaccine-month">建议 ${v.month} 月龄${v.desc?' · '+v.desc:''}</div>${dateStr}</div><span class="vaccine-tag ${v.type}">${v.type==='free'?'免费':'自费'}</span></div>${formHtml}</div>`;
   }).join('');
   if(customVaccines.length){
     html+='<div class="vaccine-section-divider">自费/自选疫苗</div>';
@@ -706,7 +715,10 @@ function renderVaccines(){
       let cls='vaccine-item'; if(checked)cls+=' done';
       const overdue=!checked&&v.month<babyM?'<span style="color:var(--angry);font-size:0.6rem;"> ⚠ 逾期</span>':'';
       const dateStr=checked&&rec.date?`<div class="vaccine-date">📅 接种日期 ${rec.date}</div>`:'';
-      return `<div class="${cls}"><div class="vaccine-check" onclick="toggleVaccine('c${i}')">${checked?'✓':''}</div><div class="vaccine-info"><div class="vaccine-name-text">${v.name}${overdue}</div><div class="vaccine-month">建议 ${v.month} 月龄${v.desc?' · '+v.desc:''}</div>${dateStr}</div><span class="vaccine-tag paid">自费</span></div>`;
+      const formId='vaccineForm_c'+i;
+      const dateId='vaccineDate_c'+i;
+      const formHtml=checked?'':`<div class="vaccine-form" id="${formId}"><div class="vaccine-form-row"><input type="date" id="${dateId}" value="${getToday()}"><button class="btn btn-sm" onclick="saveVaccineRecord('c${i}')">保存</button><button class="btn btn-outline btn-sm" onclick="hideVaccineForm('${formId}')">取消</button></div></div>`;
+      return `<div class="vaccine-item-wrap"><div class="${cls}"><div class="vaccine-check" onclick="toggleVaccine('c${i}')">${checked?'✓':''}</div><div class="vaccine-info"><div class="vaccine-name-text">${v.name}${overdue}</div><div class="vaccine-month">建议 ${v.month} 月龄${v.desc?' · '+v.desc:''}</div>${dateStr}</div><span class="vaccine-tag paid">自费</span></div>${formHtml}</div>`;
     }).join('');
   }
   document.getElementById('vaccineList').innerHTML=html;
@@ -728,19 +740,25 @@ function toggleVaccine(i){
       renderVaccines();
     }
   } else {
-    // 未接种 → 记录实际接种日期
-    const d=prompt('请输入实际接种日期\n（格式 YYYY-MM-DD，如 2026-08-15）',getToday());
-    if(d!==null){
-      const date=d.trim();
-      if(date&&!/^\d{4}-\d{2}-\d{2}$/.test(date)){
-        alert('日期格式不正确，请按 YYYY-MM-DD 格式输入');
-        return;
-      }
-      vaccineData[i]={checked:true, date:date||getToday()};
-      saveData(KEYS.vaccines,vaccineData);
-      renderVaccines();
-    }
+    // 未接种 → 展开日期输入表单（先收起其他）
+    document.querySelectorAll('.vaccine-form.active').forEach(el=>el.classList.remove('active'));
+    const formId=typeof i==='string'&&i.startsWith('c')?'vaccineForm_'+i:'vaccineForm_'+i;
+    const form=document.getElementById(formId);
+    if(form) form.classList.add('active');
   }
+}
+function saveVaccineRecord(i){
+  const dateId=typeof i==='string'&&i.startsWith('c')?'vaccineDate_'+i:'vaccineDate_'+i;
+  const dateInput=document.getElementById(dateId);
+  const date=dateInput?dateInput.value.trim():'';
+  if(!date){alert('请选择接种日期');return;}
+  vaccineData[i]={checked:true, date:date};
+  saveData(KEYS.vaccines,vaccineData);
+  renderVaccines();
+}
+function hideVaccineForm(formId){
+  const form=document.getElementById(formId);
+  if(form) form.classList.remove('active');
 }
 renderVaccines();
 
