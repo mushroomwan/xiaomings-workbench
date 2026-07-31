@@ -33,9 +33,31 @@ self.addEventListener('activate', function(event) {
   self.clients.claim();
 });
 
-// 请求拦截：缓存优先，网络回退
+// 请求拦截：导航请求用网络优先，其他用缓存优先
 self.addEventListener('fetch', function(event) {
   if (event.request.method !== 'GET') return;
+
+  // 页面导航请求（xm.html）：网络优先，失败回退缓存
+  if (event.request.mode === 'navigate' || event.request.url.endsWith('xm.html')) {
+    event.respondWith(
+      fetch(event.request).then(function(resp) {
+        if (resp && resp.status === 200) {
+          const respClone = resp.clone();
+          caches.open(CACHE_NAME).then(function(cache) {
+            cache.put(event.request, respClone);
+          });
+        }
+        return resp;
+      }).catch(function() {
+        return caches.match(event.request).then(function(r) {
+          return r || caches.match('xm.html');
+        });
+      })
+    );
+    return;
+  }
+
+  // 其他资源：缓存优先，网络回退
   event.respondWith(
     caches.match(event.request).then(function(response) {
       if (response) return response;
@@ -47,10 +69,6 @@ self.addEventListener('fetch', function(event) {
           });
         }
         return resp;
-      }).catch(function() {
-        if (event.request.mode === 'navigate') {
-          return caches.match('xm.html');
-        }
       });
     })
   );
