@@ -407,8 +407,8 @@ if (location.protocol.startsWith('http')) {
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <script>
 // ==================== 云端同步配置 ====================
-// 使用 GitHub 仓库文件存储数据，支持跨域，两人数据共享
-// Token 首次使用时输入，保存在 localStorage 中
+// 手动同步：数据默认只存本地 localStorage，不会丢失
+// 用户点"上传云端"才上传，点"从云端恢复"才覆盖本地
 const CLOUD = {
   OWNER: 'mushroomwan',
   REPO: 'xiaomings-workbench',
@@ -417,15 +417,13 @@ const CLOUD = {
 };
 
 let cloudReady = false;
-let lastSyncTime = 0;
 let isSyncing = false;
-let fileSha = '';
 
 // 从 localStorage 读取或首次输入 Token
 function getToken(){
   let token = localStorage.getItem('wb_cloud_token');
   if(!token){
-    token = prompt('首次使用请输入 GitHub Token 以开启云端同步\n（输入后会自动保存，下次无需再输）');
+    token = prompt('首次使用请输入 GitHub Token\n（输入后会自动保存，下次无需再输）\n\n注意：Token 仅用于上传/恢复数据，不影响本地存储');
     if(token){
       token = token.trim();
       localStorage.setItem('wb_cloud_token', token);
@@ -441,85 +439,57 @@ function checkCloud(){
   if(cloudReady) CLOUD.TOKEN = token;
 }
 
-// 保存所有数据到云端（GitHub 仓库文件）
-async function saveToCloud(){
-  if(!cloudReady || isSyncing) return;
+// 手动上传：把本地数据保存到云端
+async function uploadToCloud(){
+  if(!cloudReady){ alert('请先配置 Token'); return; }
+  if(isSyncing) return;
   isSyncing = true;
+  document.getElementById('syncStatus').textContent='⏳ 正在上传...';
   try{
     const allData = {};
-    let hasRealData = false;
-    Object.keys(localStorage).forEach(k => {
-      if(k.startsWith('wb_')){
-        const v = localStorage.getItem(k);
-        if(v && v !== '[]' && v !== '{}' && v !== 'null'){ hasRealData = true; }
-        allData[k] = v;
-      }
-    });
-    // 如果本地没有任何实质数据，先尝试从云端恢复，避免用空数据覆盖云端
-    if(!hasRealData){
-      console.log('本地无数据，跳过云端保存，尝试从云端恢复');
-      isSyncing = false;
-      loadFromCloud();
-      return;
-    }
+    Object.keys(localStorage).forEach(k => { if(k.startsWith('wb_')) allData[k] = localStorage.getItem(k); });
     allData._syncTime = Date.now();
     const content = btoa(unescape(encodeURIComponent(JSON.stringify(allData))));
-    // 先获取当前文件 sha
     const getRes = await fetch(CLOUD.API+'?ref=main', { headers:{ 'Authorization':'token '+CLOUD.TOKEN } });
     let sha = '';
-    if(getRes.ok){
-      const fileInfo = await getRes.json();
-      sha = fileInfo.sha || '';
-    }
+    if(getRes.ok){ const fileInfo = await getRes.json(); sha = fileInfo.sha || ''; }
     const res = await fetch(CLOUD.API, {
       method:'PUT',
       headers:{ 'Authorization':'token '+CLOUD.TOKEN, 'Content-Type':'application/json' },
-      body: JSON.stringify({
-        message: '同步工作台数据',
-        content: content,
-        sha: sha,
-        branch: 'main'
-      })
+      body: JSON.stringify({ message:'同步工作台数据', content:content, sha:sha, branch:'main' })
     });
-    if(res.ok){ lastSyncTime = Date.now(); console.log('云端保存成功'); }
-    else { console.log('云端保存失败:', res.status); }
-  }catch(e){ console.log('云端保存失败:',e); }
+    if(res.ok){
+      document.getElementById('syncStatus').textContent='✅ 上传成功！数据已同步到云端';
+      document.getElementById('syncStatus').style.color='#6B9B6B';
+      setTimeout(()=>{ document.getElementById('syncStatus').textContent='☁️ 已连接云端'; }, 3000);
+    } else {
+      document.getElementById('syncStatus').textContent='❌ 上传失败';
+      document.getElementById('syncStatus').style.color='var(--angry)';
+    }
+  }catch(e){ document.getElementById('syncStatus').textContent='❌ 上传失败:'+e; }
   isSyncing = false;
 }
 
-// 从云端加载数据（GitHub 仓库文件）
-async function loadFromCloud(){
-  if(!cloudReady || isSyncing) return;
+// 手动恢复：从云端下载数据覆盖本地（会提示确认）
+async function restoreFromCloud(){
+  if(!cloudReady){ alert('请先配置 Token'); return; }
+  if(isSyncing) return;
+  if(!confirm('确定从云端恢复数据吗？\n\n⚠️ 这会覆盖本地当前的数据！\n建议先上传当前数据到云端备份。')) return;
   isSyncing = true;
+  document.getElementById('syncStatus').textContent='⏳ 正在恢复...';
   try{
     const res = await fetch(CLOUD.API+'?ref=main', { headers:{ 'Authorization':'token '+CLOUD.TOKEN } });
-    if(!res.ok){ isSyncing=false; console.log('云端加载失败:', res.status); return; }
+    if(!res.ok){ document.getElementById('syncStatus').textContent='❌ 恢复失败'; isSyncing=false; return; }
     const data = await res.json();
-    if(!data.content){ isSyncing=false; return; }
+    if(!data.content){ document.getElementById('syncStatus').textContent='❌ 云端无数据'; isSyncing=false; return; }
     const cloudData = JSON.parse(decodeURIComponent(escape(atob(data.content.replace(/\s/g,'')))));
-    if(!cloudData || !cloudData._syncTime){ isSyncing=false; return; }
-    // 检查云端是否有实质数据
-    let cloudHasData = false;
-    Object.keys(cloudData).forEach(k => { if(k.startsWith('wb_') && cloudData[k] && cloudData[k] !== '[]' && cloudData[k] !== '{}') cloudHasData = true; });
-    if(!cloudHasData){ isSyncing=false; return; }
-    if(cloudData._syncTime > lastSyncTime){
-      let changed = false;
-      Object.keys(cloudData).forEach(k => {
-        if(k.startsWith('wb_')){
-          const localVal = localStorage.getItem(k);
-          // 只有云端有数据且本地为空/不同时，才覆盖本地
-          if(cloudData[k] && cloudData[k] !== '[]' && cloudData[k] !== '{}'){
-            if(localVal !== cloudData[k]){
-              localStorage.setItem(k, cloudData[k]);
-              changed = true;
-            }
-          }
-        }
-      });
-      lastSyncTime = cloudData._syncTime;
-      if(changed){ console.log('云端数据已更新，刷新页面'); location.reload(); }
-    }
-  }catch(e){ console.log('云端加载失败:',e); }
+    if(!cloudData || !cloudData._syncTime){ document.getElementById('syncStatus').textContent='❌ 云端无有效数据'; isSyncing=false; return; }
+    Object.keys(cloudData).forEach(k => {
+      if(k.startsWith('wb_')) localStorage.setItem(k, cloudData[k]);
+    });
+    document.getElementById('syncStatus').textContent='✅ 恢复成功！正在刷新...';
+    setTimeout(()=>{ location.reload(); }, 1000);
+  }catch(e){ document.getElementById('syncStatus').textContent='❌ 恢复失败:'+e; }
   isSyncing = false;
 }
 
@@ -528,7 +498,7 @@ const KEYS = { vaccines:'wb_vaccines', customVaccines:'wb_customVaccines', growt
 const getToday = () => { const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
 const formatTime = d => new Date(d).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
 const loadData = (k, def=[]) => { try { const d = localStorage.getItem(k); return d ? JSON.parse(d) : def; } catch { return def; } };
-const saveData = (k,d) => { localStorage.setItem(k, JSON.stringify(d)); saveToCloud(); };
+const saveData = (k,d) => { localStorage.setItem(k, JSON.stringify(d)); };
 
 document.getElementById('currentDate').textContent = new Date().toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
 
@@ -863,12 +833,9 @@ renderLinkNotes();
 // ==================== 云端同步初始化 ====================
 checkCloud();
 if(cloudReady){
-  document.getElementById('syncStatus').textContent='☁️ 已连接云端，数据自动同步';
-  document.getElementById('syncStatus').style.color='#6B9B6B';
-  loadFromCloud();
-  setInterval(loadFromCloud, 10000);
+  document.getElementById('syncStatus').innerHTML='☁️ 已连接云端 · <a href="javascript:uploadToCloud()" style="color:var(--primary);font-weight:600;">上传</a> / <a href="javascript:restoreFromCloud()" style="color:var(--primary);font-weight:600;">恢复</a>';
 } else {
-  document.getElementById('syncStatus').textContent='📡 未连接云端（需配置 API Key 才能和老公同步）';
+  document.getElementById('syncStatus').textContent='📡 未连接云端（数据保存在本地，不会丢失）';
   document.getElementById('syncStatus').style.color='var(--text-light)';
 }
 </script>
