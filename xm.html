@@ -439,7 +439,21 @@ async function saveToCloud(){
   isSyncing = true;
   try{
     const allData = {};
-    Object.keys(localStorage).forEach(k => { if(k.startsWith('wb_')) allData[k] = localStorage.getItem(k); });
+    let hasRealData = false;
+    Object.keys(localStorage).forEach(k => {
+      if(k.startsWith('wb_')){
+        const v = localStorage.getItem(k);
+        if(v && v !== '[]' && v !== '{}' && v !== 'null'){ hasRealData = true; }
+        allData[k] = v;
+      }
+    });
+    // 如果本地没有任何实质数据，先尝试从云端恢复，避免用空数据覆盖云端
+    if(!hasRealData){
+      console.log('本地无数据，跳过云端保存，尝试从云端恢复');
+      isSyncing = false;
+      loadFromCloud();
+      return;
+    }
     allData._syncTime = Date.now();
     const content = btoa(unescape(encodeURIComponent(JSON.stringify(allData))));
     // 先获取当前文件 sha
@@ -476,14 +490,21 @@ async function loadFromCloud(){
     if(!data.content){ isSyncing=false; return; }
     const cloudData = JSON.parse(decodeURIComponent(escape(atob(data.content.replace(/\s/g,'')))));
     if(!cloudData || !cloudData._syncTime){ isSyncing=false; return; }
+    // 检查云端是否有实质数据
+    let cloudHasData = false;
+    Object.keys(cloudData).forEach(k => { if(k.startsWith('wb_') && cloudData[k] && cloudData[k] !== '[]' && cloudData[k] !== '{}') cloudHasData = true; });
+    if(!cloudHasData){ isSyncing=false; return; }
     if(cloudData._syncTime > lastSyncTime){
       let changed = false;
       Object.keys(cloudData).forEach(k => {
         if(k.startsWith('wb_')){
           const localVal = localStorage.getItem(k);
-          if(localVal !== cloudData[k]){
-            localStorage.setItem(k, cloudData[k]);
-            changed = true;
+          // 只有云端有数据且本地为空/不同时，才覆盖本地
+          if(cloudData[k] && cloudData[k] !== '[]' && cloudData[k] !== '{}'){
+            if(localVal !== cloudData[k]){
+              localStorage.setItem(k, cloudData[k]);
+              changed = true;
+            }
           }
         }
       });
