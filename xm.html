@@ -517,7 +517,7 @@ async function loadFromCloud(){
 
 // ==================== 通用 ====================
 const KEYS = { vaccines:'wb_vaccines', customVaccines:'wb_customVaccines', growth:'wb_growth', linkNotes:'wb_linkNotes', food:'wb_food' };
-const getToday = () => new Date().toISOString().split('T')[0];
+const getToday = () => { const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
 const formatTime = d => new Date(d).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
 const loadData = (k, def=[]) => { try { const d = localStorage.getItem(k); return d ? JSON.parse(d) : def; } catch { return def; } };
 const saveData = (k,d) => { localStorage.setItem(k, JSON.stringify(d)); saveToCloud(); };
