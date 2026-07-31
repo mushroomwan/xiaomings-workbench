@@ -321,17 +321,10 @@ if (location.protocol.startsWith('http')) {
     <div class="card link-card">
       <div class="card-header">
         <div class="card-icon">🔗</div>
-        <div><div class="card-title">育儿学习笔记</div><div class="card-subtitle">提取要点 · 沉淀学习</div></div>
+        <div><div class="card-title">育儿学习笔记</div><div class="card-subtitle">记录要点 · 沉淀学习</div></div>
       </div>
-      <div class="platform-hint">💡 粘贴小红书/抖音/B站链接，再把内容文字粘贴到下方，帮你整理学习要点。</div>
-      <div class="link-input-row">
-        <input type="text" id="linkUrl" placeholder="粘贴链接（小红书/抖音/B站等）">
-        <button class="btn btn-sm" onclick="parseLink()">识别</button>
-      </div>
-      <textarea class="content-paste" id="linkContent" placeholder="把链接里的文字内容粘贴到这里..."></textarea>
-      <button class="assist-btn" onclick="assistExtract()">✨ 辅助提取要点（自动分析关键句）</button>
       <div class="note-fields">
-        <div class="note-field"><label>我要学习/行动的</label><textarea id="noteLearn" placeholder="我要学什么？要做什么？"></textarea></div>
+        <div class="note-field"><textarea id="noteLearn" placeholder="育儿怎么做？记录你学到的、想尝试的..."></textarea></div>
         <div class="note-field"><label>标签</label>
           <div class="tag-chips">
             <span class="tag-chip" onclick="toggleTag(this)">英语学习</span>
@@ -814,30 +807,16 @@ function hideVaccineForm(formId){
 }
 renderVaccines();
 
-// ==================== 链接学习笔记 ====================
+// ==================== 育儿学习笔记 ====================
 let linkNotes = loadData(KEYS.linkNotes,[]);
 let currentFilter='all';
-function detectPlatform(url){ if(!url)return{key:'other',label:'其他'};const u=url.toLowerCase();if(u.includes('xiaohongshu')||u.includes('xhslink')||u.includes('xhs'))return{key:'xhs',label:'小红书'};if(u.includes('douyin')||u.includes('iesdouyin'))return{key:'dy',label:'抖音'};if(u.includes('bilibili')||u.includes('b23.tv'))return{key:'bili',label:'B站'};if(u.includes('weibo'))return{key:'other',label:'微博'};return{key:'other',label:'其他'}; }
-function parseLink(){ const url=document.getElementById('linkUrl').value.trim();if(!url){alert('请粘贴链接');return;}const p=detectPlatform(url);alert(`已识别：${p.label}\n\n平台限制无法自动抓取，请把正文文字粘贴到下方，我再帮你整理。`); }
-function assistExtract(){
-  const text=document.getElementById('linkContent').value.trim();
-  if(!text||text.length<20){alert('请先粘贴内容文字（至少20字）');return;}
-  const kw=['重点','关键','第一','其次','核心','最重要','建议','需要','应该','记住','必须','总之','因此','所以','其实','真正','学会','要','可以'];
-  const sents=text.split(/[。！？!?\n\r]+/).map(s=>s.trim()).filter(s=>s.length>8);
-  const scored=sents.map(s=>{let sc=0;kw.forEach(k=>{if(s.includes(k))sc+=2;});if(s.length>15&&s.length<60)sc+=1;if(/[一二三四五六七八九十\d]/.test(s))sc+=1;return{s:s,sc:sc};}).sort((a,b)=>b.sc-a.sc).slice(0,4);
-  if(!scored.length){alert('内容太少，请手动填写');return;}
-  const lk=['学习','练习','每天','坚持','试试','尝试','开始','培养','养成'];
-  document.getElementById('noteLearn').value=sents.filter(s=>lk.some(k=>s.includes(k))).slice(0,3).join('；')||scored.map(x=>x.s).join('；');
-  alert('✨ 已提取要点，可编辑后保存。');
-}
 function toggleTag(el){ el.classList.toggle('active'); }
 function saveLinkNote(){
-  const url=document.getElementById('linkUrl').value.trim(),content=document.getElementById('linkContent').value.trim(),learn=document.getElementById('noteLearn').value.trim(),tags=Array.from(document.querySelectorAll('.tag-chip.active')).map(t=>t.textContent);
-  if(!learn&&!content){alert('请至少填写学习要点');return;}
-  const p=detectPlatform(url);
-  linkNotes.unshift({id:Date.now(),url:url,platform:p.key,platformLabel:p.label,content:content.substring(0,200),learn:learn,tags:tags,time:new Date().toISOString()});
+  const learn=document.getElementById('noteLearn').value.trim(),tags=Array.from(document.querySelectorAll('.tag-chip.active')).map(t=>t.textContent);
+  if(!learn){alert('请先写点什么');return;}
+  linkNotes.unshift({id:Date.now(),learn:learn,tags:tags,time:new Date().toISOString()});
   saveData(KEYS.linkNotes,linkNotes);
-  document.getElementById('linkUrl').value='';document.getElementById('linkContent').value='';document.getElementById('noteLearn').value='';
+  document.getElementById('noteLearn').value='';
   document.querySelectorAll('.tag-chip.active').forEach(t=>t.classList.remove('active'));
   renderLinkNotes();
 }
@@ -846,7 +825,7 @@ function renderLinkNotes(){
   const el=document.getElementById('linkNotesList');
   let list=linkNotes; if(currentFilter!=='all')list=linkNotes.filter(n=>n.tags&&n.tags.includes(currentFilter));
   if(!list.length){el.innerHTML='<div style="text-align:center;color:var(--text-light);font-size:0.72rem;padding:12px;">还没有学习笔记 📝</div>';return;}
-  el.innerHTML=list.map(n=>`<div class="link-note-item"><div class="link-note-header"><div><span class="link-note-platform platform-${n.platform}">${n.platformLabel}</span>${n.url?`<div class="link-note-title" style="margin-top:3px;word-break:break-all;font-size:0.75rem;font-weight:600;">${n.url.substring(0,50)}${n.url.length>50?'...':''}</div>`:''}</div><button class="delete-btn" onclick="deleteLinkNote(${n.id})">✕</button></div>${n.learn?`<div class="link-note-core"><strong>学习：</strong>${n.learn}</div>`:''}${n.content?`<div style="font-size:0.68rem;color:var(--text-light);margin-top:5px;line-height:1.5;">${n.content}</div>`:''}${n.tags&&n.tags.length?`<div class="link-note-tags">${n.tags.map(t=>`<span class="link-note-tag">#${t}</span>`).join('')}</div>`:''}<div style="font-size:0.6rem;color:var(--text-light);margin-top:5px;">${formatTime(n.time)}</div></div>`).join('');
+  el.innerHTML=list.map(n=>`<div class="link-note-item"><div class="link-note-header"><div></div><button class="delete-btn" onclick="deleteLinkNote(${n.id})">✕</button></div>${n.learn?`<div class="link-note-core">${n.learn}</div>`:''}${n.tags&&n.tags.length?`<div class="link-note-tags">${n.tags.map(t=>`<span class="link-note-tag">#${t}</span>`).join('')}</div>`:''}<div style="font-size:0.6rem;color:var(--text-light);margin-top:5px;">${formatTime(n.time)}</div></div>`).join('');
 }
 function deleteLinkNote(id){ linkNotes=linkNotes.filter(n=>n.id!==id);saveData(KEYS.linkNotes,linkNotes);renderLinkNotes(); }
 renderLinkNotes();
