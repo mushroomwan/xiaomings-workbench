@@ -1,5 +1,5 @@
 // Service Worker - 小明的工作台
-const CACHE_NAME = 'xm-workbench-v4';
+const CACHE_NAME = 'xm-workbench-v6';
 const CACHE_FILES = [
   'xm.html',
   'manifest.json',
@@ -33,14 +33,14 @@ self.addEventListener('activate', function(event) {
   self.clients.claim();
 });
 
-// 请求拦截：导航请求用网络优先，其他用缓存优先
+// 请求拦截：导航请求始终走网络（不回退缓存），其他资源缓存优先
 self.addEventListener('fetch', function(event) {
   if (event.request.method !== 'GET') return;
 
-  // 页面导航请求（xm.html）：网络优先，失败回退缓存
+  // 页面导航请求：始终走网络，避免缓存旧版本
   if (event.request.mode === 'navigate' || event.request.url.endsWith('xm.html')) {
     event.respondWith(
-      fetch(event.request).then(function(resp) {
+      fetch(event.request + '?t=' + Date.now(), { cache: 'no-store' }).then(function(resp) {
         if (resp && resp.status === 200) {
           const respClone = resp.clone();
           caches.open(CACHE_NAME).then(function(cache) {
