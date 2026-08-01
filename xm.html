@@ -424,6 +424,29 @@ function getToken(){
   }
   return token;
 }
+// 自动从云端拉取最新数据（静默，不覆盖本地较新数据）
+async function autoSyncFromCloud(){
+  if(!cloudReady) return;
+  try{
+    const res = await fetch(CLOUD.API+'?ref=main&t='+Date.now(), { headers:{ 'Authorization':'token '+CLOUD.TOKEN } });
+    if(!res.ok) return;
+    const data = await res.json();
+    if(!data.content) return;
+    const cloudData = JSON.parse(decodeURIComponent(escape(atob(data.content.replace(/\s/g,'')))));
+    if(!cloudData || !cloudData._syncTime) return;
+    const cloudTime = cloudData._syncTime;
+    const localTime = parseInt(localStorage.getItem('wb_last_sync')||'0');
+    // 云端比本地新，自动恢复
+    if(cloudTime > localTime){
+      Object.keys(cloudData).forEach(k => {
+        if(k.startsWith('wb_') && k !== 'wb_cloud_token') localStorage.setItem(k, cloudData[k]);
+      });
+      localStorage.setItem('wb_last_sync', cloudTime);
+      // 静默刷新页面数据
+      location.reload();
+    }
+  }catch(e){ console.log('自动同步跳过:', e.message); }
+}
 
 // 检查云端是否已配置
 function checkCloud(){
@@ -464,6 +487,7 @@ async function uploadToCloud(){
       body: JSON.stringify({ message:'同步工作台数据', content:content, sha:sha, branch:'main' })
     });
     if(res.ok){
+      localStorage.setItem('wb_last_sync', allData._syncTime);
       document.getElementById('syncStatus').textContent='✅ 上传成功！';
       document.getElementById('syncStatus').style.color='#6B9B6B';
       setTimeout(()=>{ 
@@ -833,6 +857,8 @@ renderLinkNotes();
 checkCloud();
 if(cloudReady){
   document.getElementById('syncStatus').innerHTML='☁️ 已连接云端 · <a href="javascript:uploadToCloud()" style="color:var(--primary);font-weight:600;">上传</a> / <a href="javascript:restoreFromCloud()" style="color:var(--primary);font-weight:600;">恢复</a>';
+  // 页面打开时自动从云端拉取最新数据
+  autoSyncFromCloud();
 } else {
   document.getElementById('syncStatus').textContent='📡 未连接云端（数据保存在本地，不会丢失）';
   document.getElementById('syncStatus').style.color='var(--text-light)';
